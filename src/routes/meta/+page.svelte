@@ -13,9 +13,10 @@ let yAxisGridlines;
 let hoveredIndex = -1;
 let cursor = {x: 0, y: 0};
 let clickedCommits = [];
+let commitProgress = 100;
 
 
-$: hoveredCommit = commits[hoveredIndex] ?? hoveredCommit ?? {};
+$: hoveredCommit = filteredCommits[hoveredIndex] ?? hoveredCommit ?? {};
 
 let usableArea = {
     top: margin.top,
@@ -77,7 +78,7 @@ $: maxDatePlusOne = new Date(maxDate);
 $: maxDatePlusOne.setDate(maxDatePlusOne.getDate() + 1);
 
 $: xScale = d3.scaleTime()
-              .domain([minDate, maxDatePlusOne])
+              .domain([filteredminDate, filteredmaxDatePlusOne])
               .range([usableArea.left, usableArea.right])
               .nice();
 
@@ -88,6 +89,14 @@ $: yScale = d3.scaleLinear()
 $: rScale = d3.scaleSqrt()
                 .domain(d3.extent(commits.map(d => d.totalLines)))
                 .range([2, 30]);
+$: timeScale = d3.scaleTime().domain([minDate,maxDate]).range([0,100]);
+$: commitMaxTime = timeScale.invert(commitProgress);
+
+$: filteredCommits = commits.filter(commit => commit.datetime <= commitMaxTime);
+$: filteredminDate = d3.min(filteredCommits.map(d => d.date));
+$: filteredmaxDate = d3.max(filteredCommits.map(d => d.date));
+$: filteredmaxDatePlusOne = new Date(filteredmaxDate);
+$: filteredmaxDatePlusOne.setDate(filteredmaxDatePlusOne.getDate() + 1);
 
 $: {
     d3.select(xAxis).call(d3.axisBottom(xScale));
@@ -119,7 +128,7 @@ async function dotInteraction (index, evt) {
     }
 	
 	else if (evt.type === "click") {
-		let commit = commits[index]
+		let commit = filteredCommits[index]
 		if (!clickedCommits.includes(commit)) {
 			// Add the commit to the clickedCommits array
 			clickedCommits = [...clickedCommits, commit];
@@ -155,12 +164,20 @@ async function dotInteraction (index, evt) {
     <dd>{ hoveredCommit.time }</dd>
 </dl>
 
+ <div class="slider-container">
+     <div class="slider">
+         <label for="slider">Show commits until:</label>
+         <input type="range" id="slider" name="slider" min=0 max=100 bind:value={commitProgress}/>
+     </div>
+     <time class="time-label">{commitMaxTime.toLocaleString()}</time>
+ </div>
+
 <svg viewBox="0 0 {width} {height}">
     <g transform="translate(0, {usableArea.bottom})" bind:this={xAxis} />
     <g transform="translate({usableArea.left}, 0)" bind:this={yAxis} />
     <g class="gridlines" transform="translate({usableArea.left}, 0)" bind:this={yAxisGridlines} />
     <g class="dots">
-        {#each commits as commit, index }
+        {#each filteredCommits as commit, index }
             <circle
 				class:selected={ clickedCommits.includes(commit) }
 			 	on:click={ evt => dotInteraction(index, evt) }
@@ -264,11 +281,30 @@ async function dotInteraction (index, evt) {
         &:hover {
             transform: scale(1.5);
         }
+		@starting-style {
+			r: 0;
+		}
     }
 
 	.selected {
     fill: var(--color-accent);
 	}
 
+	.slider-container{
+	display:grid;
+	}
+
+	.slider{
+		display: flex;
+	}
+
+	#slider{
+		flex:1;
+	}
+
+	.time-label{
+		font-size: 0.75em;
+		text-align: right;
+	}
 
 </style>
