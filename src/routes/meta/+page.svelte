@@ -62,9 +62,10 @@ onMount(async () => {
     commits = d3.sort(commits, d => -d.totalLines);
 });
 
+$: filteredLines = data.filter(d => d.datetime <= commitMaxTime)
 
 $: allTypes = Array.from(new Set(data.map(d => d.type)));
-$: selectedLines = (clickedCommits.length > 0 ? clickedCommits : commits).flatMap(d => d.lines);
+$: selectedLines = (clickedCommits.length > 0 ? clickedCommits : filteredCommits).flatMap(d => d.lines);
 $: selectedCounts = d3.rollup(
     selectedLines,
     v => v.length,
@@ -199,11 +200,11 @@ async function dotInteraction (index, evt) {
     <h2>Summary</h2>
     <dl class="stats">
         <dt>Total <abbr title="Lines of code">LOC</abbr></dt>
-        <dd>{data.length}</dd>
+        <dd>{filteredLines.length}</dd>
         <dt>Files</dt>
-        <dd>{d3.groups(data, d => d.file).length}</dd>
+        <dd>{d3.groups(filteredLines, d => d.file).length}</dd>
         <dt>Commits</dt>
-        <dd>{d3.groups(data, d => d.commit).length}</dd>
+        <dd>{d3.groups(filteredLines, d => d.commit).length}</dd>
     </dl>
 </section>
 
